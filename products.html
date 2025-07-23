@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Products</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<!-- Keep all your existing JS code as-is -->
+<!-- Below is the updated CSS part -->
+<style>
+    body {
+        background-color: #121212;
+        color: #eee;
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+    }
+
+    a {
+        color: #aaa;
+        margin-right: 15px;
+        text-decoration: none;
+    }
+
+    a:hover {
+        color: #fff;
+    }
+
+    #productsListDiv {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    #productsListDiv > div {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(8px);
+        border: 1px solid #333;
+        border-radius: 10px;
+        width: 250px;
+        padding: 15px;
+        margin: 15px;
+        text-align: center;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    #productsListDiv > div img {
+        max-width: 100%;
+        height: 150px;
+        object-fit: contain;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+
+    .delete,
+    .edit {
+        background-color: transparent;
+        border: 1px solid red;
+        color: red;
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-top: 5px;
+        cursor: pointer;
+    }
+
+    .edit {
+        border-color: #0af;
+        color: #0af;
+        margin-left: 5px;
+    }
+
+    .updateForm {
+        position: fixed;
+        top: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(10px);
+        padding: 30px;
+        border-radius: 10px;
+        color: #fff;
+        z-index: 1000;
+        box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+
+    .updateForm label,
+    .updateForm input,
+    .updateForm select {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid #333;
+        border-radius: 5px;
+        color: #fff;
+    }
+
+    .updateForm input[type="submit"] {
+        background: #333;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .updateForm input[type="submit"]:hover {
+        background: #555;
+    }
+</style>
+
+</head>
+
+<body>
+    <h1>All Products</h1>
+    <a href="./index.html">Home</a>
+    <a href="./products.html">All Products</a>
+
+    <div id="productsListDiv"></div>
+    <div id="updateForm"></div>
+
+    <script>
+        let baseUrl = window.location.href.includes("https")
+            ? "https://mongodb-crud-ecommerce-store.herokuapp.com"
+            : "http://localhost:3000";
+
+        async function getAllProducts() {
+            try {
+                const response = await axios.get(baseUrl + "/products");
+                let productsListDiv = document.querySelector("#productsListDiv");
+                productsListDiv.innerHTML = "";
+                response.data.data.forEach(eachProduct => {
+                    productsListDiv.innerHTML += `
+                        <div>
+                            <img src="./img/airpod.webp" alt="">
+                            <p><strong>${eachProduct.productName}</strong></p>
+                            <p><span>${eachProduct.currencyCode}</span> <span>${eachProduct.productPrice}</span></p>
+                            <p>${eachProduct.numberOfSale || 0} sold</p>
+                            <p>${eachProduct.isFreeShipping ? "Free shipping" : "No free shipping"}</p>
+                            <p>${eachProduct.shopName}</p>
+                            <button class="delete" onclick="deleteProduct('${eachProduct._id}')">Delete</button>
+                            <button class="edit" onclick="editProduct('${eachProduct._id}')">Edit</button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function deleteProduct(id) {
+            try {
+                await axios.delete(`${baseUrl}/product/${id}`);
+                getAllProducts();
+            } catch (e) {
+                console.log("error: ", e);
+            }
+        }
+
+        async function editProduct(id) {
+            try {
+                const response = await axios.get(`${baseUrl}/product/${id}`);
+                const product = response.data.data;
+
+                document.querySelector("#updateForm").innerHTML = `
+                    <form class="updateForm" onsubmit="completeUpdate(); return false">
+                        <label for="productId">Product ID</label>
+                        <input type="text" id="productId" value="${product._id}" disabled>
+
+                        <label for="productName">Product Name</label>
+                        <input type="text" id="productName" value="${product.productName}" required>
+
+                        <label for="productPrice">Product Price</label>
+                        <input type="number" id="productPrice" value="${product.productPrice}" required>
+
+                        <label for="currencyCode">Currency Code</label>
+                        <input type="text" id="currencyCode" value="${product.currencyCode}" required>
+
+                        <label for="numberOfSale">Number of Sale</label>
+                        <input type="number" id="numberOfSale" value="${product.numberOfSale}" required>
+
+                        <label for="rating">Product Rating</label>
+                        <input type="number" min="0" max="5" id="rating" value="${product.rating}" required>
+
+                        <label for="isFreeShipping">Free Shipping</label>
+                        <select id="isFreeShipping">
+                            <option value="true" ${product.isFreeShipping ? "selected" : ""}>Yes</option>
+                            <option value="false" ${!product.isFreeShipping ? "selected" : ""}>No</option>
+                        </select>
+
+                        <label for="shopName">Shop Name</label>
+                        <input type="text" id="shopName" value="${product.shopName}" required>
+
+                        <input type="submit" value="Complete Update">
+                    </form>
+                `;
+            } catch (e) {
+                console.log("error: ", e);
+            }
+        }
+
+        function completeUpdate() {
+            let productId = document.querySelector("#productId").value;
+            let productName = document.querySelector("#productName").value;
+            let productPrice = document.querySelector("#productPrice").value;
+            let currencyCode = document.querySelector("#currencyCode").value;
+            let numberOfSale = document.querySelector("#numberOfSale").value;
+            let rating = document.querySelector("#rating").value;
+            let isFreeShipping = document.querySelector("#isFreeShipping").value === 'true';
+            let shopName = document.querySelector("#shopName").value;
+
+            axios.put(`${baseUrl}/product/${productId}`, {
+                productName,
+                productPrice,
+                currencyCode,
+                numberOfSale,
+                rating,
+                isFreeShipping,
+                shopName
+            }).then(response => {
+                console.log(response.data);
+                document.querySelector("#updateForm").innerHTML = "";
+                getAllProducts();
+            }).catch(error => {
+                console.log(error);
+            });
+        }
+
+        getAllProducts();
+    </script>
+</body>
+
+</html>
